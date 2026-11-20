@@ -1,6 +1,6 @@
 @model IEnumerable<LMS.Models.Course>
 @{
-    ViewBag.Title = "Master In-Demand Software & Tech Skills";
+    ViewBag.Title = "Master with Experts Software & Tech Skills";
     var categories = ViewBag.Categories as IEnumerable<LMS.Models.Category> ?? Enumerable.Empty<LMS.Models.Category>();
     int totalCourses = ViewBag.TotalCourses != null ? (int)ViewBag.TotalCourses : (Model != null ? Model.Count() : 0);
     int totalStudents = ViewBag.TotalStudents != null ? (int)ViewBag.TotalStudents : 0;
