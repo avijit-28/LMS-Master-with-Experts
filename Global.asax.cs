@@ -18,6 +18,7 @@ namespace LMS
         {
             // Initialize Centralized Secure Environment Configuration (.env & System Env)
             EnvConfig.Initialize();
+            EnvConfig.ValidateStartupEnvironment();
 
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);

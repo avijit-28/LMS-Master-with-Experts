@@ -81,7 +81,8 @@ namespace LMS.Services
         {
             try
             {
-                using (var httpRequest = CreateAuthorizedRequest(HttpMethod.Post, "api/v1/documents/index", internalApiKey))
+                // Uses asynchronous queue endpoint with transparent fallback
+                using (var httpRequest = CreateAuthorizedRequest(HttpMethod.Post, "api/v1/documents/queue-index", internalApiKey))
                 {
                     var reqBody = new
                     {

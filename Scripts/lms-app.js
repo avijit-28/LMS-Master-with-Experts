@@ -412,27 +412,29 @@
 
         function filterItems() {
             var query = ($input.val() || '').toLowerCase().trim();
-            var activeCategory = $('.category-chip-btn.active').data('cat-id') || '';
-            var activeLevel = $('.level-chip-btn.active').data('level') || ($levelSelect.length ? $levelSelect.val() : '') || '';
-            if (activeLevel === 'All') activeLevel = '';
+            var $activeChip = $('.category-chip-btn.active');
+            var activeCategory = $activeChip.length ? String($activeChip.data('cat-id') || '').trim() : '';
+            var $activeLevelChip = $('.level-chip-btn.active');
+            var activeLevel = String(($activeLevelChip.length ? $activeLevelChip.data('level') : '') || ($levelSelect.length ? $levelSelect.val() : '') || '').toLowerCase().trim();
+            if (activeLevel === 'all') activeLevel = '';
 
             var visibleCount = 0;
 
             $cards.each(function () {
                 var $card = $(this);
                 var title = ($card.data('title') || '').toLowerCase();
-                var catId = ($card.data('cat-id') || '').toString();
-                var level = ($card.data('level') || '').toLowerCase();
+                var catId = String($card.data('cat-id') || '').trim();
+                var level = String($card.data('level') || '').toLowerCase().trim();
 
                 var matchesText = !query || title.indexOf(query) !== -1;
                 var matchesCategory = !activeCategory || catId === activeCategory;
-                var matchesLevel = !activeLevel || level === activeLevel.toLowerCase();
+                var matchesLevel = !activeLevel || level === activeLevel;
 
                 if (matchesText && matchesCategory && matchesLevel) {
-                    $card.fadeIn(150);
+                    $card.stop(true, true).fadeIn(150);
                     visibleCount++;
                 } else {
-                    $card.fadeOut(150);
+                    $card.stop(true, true).fadeOut(150);
                 }
             });
 
@@ -447,23 +449,36 @@
             $input.on('input', filterItems);
         }
 
+        // Category Chip Click: Only the clicked chip becomes active (orange)
         $(document).on('click', '.category-chip-btn', function (e) {
             e.preventDefault();
-            $('.category-chip-btn').removeClass('active btn-primary').addClass('btn-light border');
-            $(this).removeClass('btn-light border').addClass('active btn-primary');
+            $('.category-chip-btn').removeClass('active');
+            $(this).addClass('active');
             filterItems();
         });
 
+        // Level Chip Click
         $(document).on('click', '.level-chip-btn', function (e) {
             e.preventDefault();
-            $('.level-chip-btn').removeClass('active btn-primary').addClass('btn-outline-secondary');
-            $(this).removeClass('btn-outline-secondary').addClass('active btn-primary');
+            $('.level-chip-btn').removeClass('active');
+            $(this).addClass('active');
             var lvl = $(this).data('level') || '';
             $('#filterLevelInput').val(lvl);
             filterItems();
         });
-    };
 
+        // Clear Filters click in "No courses match" message
+        $(document).on('click', '#catalogNoMatchMessage a', function (e) {
+            e.preventDefault();
+            $('.category-chip-btn').removeClass('active');
+            $('.category-chip-btn[data-cat-id=""]').addClass('active');
+            $('.level-chip-btn').removeClass('active');
+            $('.level-chip-btn[data-level=""]').addClass('active');
+            if ($input.length) $input.val('');
+            $('#filterLevelInput').val('');
+            filterItems();
+        });
+    };
     /* ==========================================================================
        6. Certificate Utilities (Share to LinkedIn, Copy Link)
        ========================================================================== */

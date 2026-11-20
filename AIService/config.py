@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     SPARSE_WEIGHT: float = Field(default=0.35, env="SPARSE_WEIGHT")
 
     # Security
-    AISERVICE_INTERNAL_KEY: str = Field(default="lms_rag_secret_auth_token_2026_xyz987", env="AISERVICE_INTERNAL_KEY")
+    AISERVICE_INTERNAL_KEY: str = Field(default="", env="AISERVICE_INTERNAL_KEY")
     ENABLE_PROMPT_GUARDRAILS: bool = Field(default=True, env="ENABLE_PROMPT_GUARDRAILS")
 
     # Server Info

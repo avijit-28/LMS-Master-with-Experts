@@ -43,34 +43,31 @@ class QdrantStore:
                     )
                 )
                 logger.info(f"Collection '{self.collection_name}' created successfully.")
+            else:
+                info = self.client.get_collection(collection_name=self.collection_name)
+                current_dim = getattr(info.config.params.vectors, "size", None)
+                if current_dim and current_dim != settings.EMBEDDING_DIMENSION:
+                    logger.warning(f"Vector dimension mismatch detected: Collection has {current_dim}, settings require {settings.EMBEDDING_DIMENSION}. Re-creating collection...")
+                    self.client.delete_collection(collection_name=self.collection_name)
+                    self.client.create_collection(
+                        collection_name=self.collection_name,
+                        vectors_config=VectorParams(
+                            size=settings.EMBEDDING_DIMENSION,
+                            distance=Distance.COSINE
+                        )
+                    )
+                    logger.info(f"Re-created Qdrant collection '{self.collection_name}' with dim={settings.EMBEDDING_DIMENSION}.")
         except Exception as e:
             logger.error(f"Error ensuring Qdrant collection: {e}")
 
     def _sync_bm25_from_storage(self):
-        """Pre-populates BM25 in-memory index from existing points in Qdrant."""
+        """Pre-populates BM25 in-memory index from existing points in Qdrant via paginated cursor scroll."""
         try:
-            res, _ = self.client.scroll(
-                collection_name=self.collection_name,
-                limit=1000,
-                with_payload=True,
-                with_vectors=False
+            count = bm25_retriever.sync_from_qdrant_paginated(
+                qdrant_client=self.client,
+                collection_name=self.collection_name
             )
-            docs = []
-            for point in res:
-                payload = point.payload or {}
-                docs.append({
-                    "chunk_id": str(point.id),
-                    "document_id": payload.get("document_id"),
-                    "course_id": payload.get("course_id"),
-                    "module_id": payload.get("module_id"),
-                    "lesson_id": payload.get("lesson_id"),
-                    "page_number": payload.get("page_number", 1),
-                    "section_title": payload.get("section_title", ""),
-                    "visibility": payload.get("visibility", "student"),
-                    "text": payload.get("text", "")
-                })
-            bm25_retriever.index_documents(docs)
-            logger.info(f"Synced {len(docs)} documents to BM25 sparse index.")
+            logger.info(f"Synced {count} documents to BM25 sparse index.")
         except Exception as e:
             logger.warning(f"Failed to scroll points for BM25 sync: {e}")
 

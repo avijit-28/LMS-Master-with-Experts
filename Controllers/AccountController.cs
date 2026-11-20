@@ -78,7 +78,7 @@ namespace LMS.Controllers
             }
 
             string email = model.Email?.Trim();
-            var result = await SignInManager.PasswordSignInAsync(email, model.Password, model.RememberMe, shouldLockout: false);
+            var result = await SignInManager.PasswordSignInAsync(email, model.Password, model.RememberMe, shouldLockout: true);
             switch (result)
             {
                 case SignInStatus.Success:
@@ -441,7 +441,7 @@ namespace LMS.Controllers
                 reason = req.RequestReason ?? "No reason specified",
                 adminNotes = req.AdminNotes ?? "",
                 requestDate = req.RequestDate.ToString("MMM dd, yyyy hh:mm tt"),
-                token = req.ResetToken ?? ""
+                hasToken = !string.IsNullOrEmpty(req.ResetToken) // Do NOT leak plaintext token to unauthenticated JSON callers
             });
         }
 
@@ -459,6 +459,12 @@ namespace LMS.Controllers
                 return View("ForgotPassword", model);
             }
 
+            if (string.IsNullOrWhiteSpace(model.ResetToken))
+            {
+                ModelState.AddModelError("ResetToken", "One-time recovery security token is required.");
+                return View("ForgotPassword", model);
+            }
+
             if (string.IsNullOrWhiteSpace(model.NewPassword) || model.NewPassword.Length < 6)
             {
                 ModelState.AddModelError("NewPassword", "New password must be at least 6 characters long.");
@@ -472,6 +478,8 @@ namespace LMS.Controllers
             }
 
             var email = model.Email.Trim();
+            var utcNow = DateTime.UtcNow;
+
             var req = await _db.PasswordResetRequests
                 .Include(r => r.User)
                 .Where(r => r.Email == email)
@@ -480,54 +488,101 @@ namespace LMS.Controllers
 
             if (req == null || (!req.IsApproved && req.Status != "Approved"))
             {
-                ModelState.AddModelError("", "Your request is not approved by an administrator yet. Please check again after administrator approval.");
+                ModelState.AddModelError("", "Your password reset request has not been approved by an administrator yet.");
+                return View("ForgotPassword", model);
+            }
+
+            // Constant-time token verification (Side-channel hardened)
+            byte[] expectedBytes = System.Text.Encoding.UTF8.GetBytes(req.ResetToken ?? string.Empty);
+            byte[] submittedBytes = System.Text.Encoding.UTF8.GetBytes(model.ResetToken.Trim());
+
+            bool isTokenValid = expectedBytes.Length > 0 &&
+                                expectedBytes.Length == submittedBytes.Length &&
+                                FixedTimeEquals(expectedBytes, submittedBytes);
+
+            if (!isTokenValid)
+            {
+                ModelState.AddModelError("ResetToken", "Invalid or expired recovery security token.");
+                return View("ForgotPassword", model);
+            }
+
+            // Expiration verification: 24 hours maximum token lifetime
+            if (req.RequestDate < utcNow.AddHours(-24) || (req.TokenExpiry.HasValue && req.TokenExpiry.Value < utcNow))
+            {
+                req.Status = "Completed";
+                req.IsApproved = false;
+                req.TokenExpiry = utcNow;
+                req.ResetToken = null;
+                await _db.SaveChangesAsync();
+
+                ModelState.AddModelError("", "Password reset token has expired (24-hour limit). Please submit a new request.");
                 return View("ForgotPassword", model);
             }
 
             var user = req.User ?? await UserManager.FindByEmailAsync(email);
             if (user == null)
             {
-                ModelState.AddModelError("", "User account could not be found.");
+                ModelState.AddModelError("", "Associated user account could not be found.");
                 return View("ForgotPassword", model);
             }
 
-            var removeResult = await UserManager.RemovePasswordAsync(user.Id);
-            var addResult = await UserManager.AddPasswordAsync(user.Id, model.NewPassword);
+            // Atomic reset via Identity Token to prevent credential bricking
+            string identityToken = await UserManager.GeneratePasswordResetTokenAsync(user.Id);
+            var resetResult = await UserManager.ResetPasswordAsync(user.Id, identityToken, model.NewPassword);
 
-            if (addResult.Succeeded)
+            if (!resetResult.Succeeded)
             {
-                req.Status = "Completed";
-                req.IsApproved = false;
-
-                _db.Notifications.Add(new Notification
+                foreach (var error in resetResult.Errors)
                 {
-                    UserId = user.Id,
-                    Title = "Password Changed",
-                    Message = "Your account password has been successfully updated via administrator-approved recovery.",
-                    NotificationType = "Security",
-                    IsRead = false,
-                    CreatedDate = DateTime.UtcNow
-                });
-
-                await _db.SaveChangesAsync();
-
-                // Automatically log the user in!
-                await SignInManager.SignInAsync(user, isPersistent: false, rememberBrowser: false);
-
-                TempData["SuccessMessage"] = $"Your password has been reset successfully! Welcome back, {user.FullName}.";
-
-                var roles = await UserManager.GetRolesAsync(user.Id);
-                if (roles.Contains("Admin")) return RedirectToAction("Index", "Admin");
-                if (roles.Contains("Instructor")) return RedirectToAction("Index", "Instructor");
-                return RedirectToAction("Index", "Student");
+                    ModelState.AddModelError("", error);
+                }
+                return View("ForgotPassword", model);
             }
 
-            foreach (var err in addResult.Errors)
+            // Invalidate and retire the reset token immediately to prevent replay attacks
+            req.Status = "Completed";
+            req.IsApproved = false;
+            req.TokenExpiry = utcNow;
+            req.ResetToken = null; // Purge plaintext token from database
+
+            _db.Notifications.Add(new Notification
             {
-                ModelState.AddModelError("", err);
-            }
+                UserId = user.Id,
+                Title = "Security Alert: Password Changed",
+                Message = "Your account password was successfully reset via administrator-approved recovery.",
+                NotificationType = "Security",
+                IsRead = false,
+                CreatedDate = utcNow
+            });
 
-            return View("ForgotPassword", model);
+            await _db.SaveChangesAsync();
+
+            // Automatically log the user in
+            await SignInManager.SignInAsync(user, isPersistent: false, rememberBrowser: false);
+
+            TempData["SuccessMessage"] = $"Your password has been reset successfully! Welcome back, {user.FullName}.";
+
+            var roles = await UserManager.GetRolesAsync(user.Id);
+            if (roles.Contains("Admin")) return RedirectToAction("Index", "Admin");
+            if (roles.Contains("Instructor")) return RedirectToAction("Index", "Instructor");
+            return RedirectToAction("Index", "Student");
+        }
+
+        /// <summary>
+        /// Constant-time byte comparison helper to prevent timing side-channel attacks on security tokens.
+        /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining | System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+        private static bool FixedTimeEquals(byte[] left, byte[] right)
+        {
+            if (left == null || right == null || left.Length != right.Length)
+                return false;
+
+            int accumulatedDiff = 0;
+            for (int i = 0; i < left.Length; i++)
+            {
+                accumulatedDiff |= left[i] ^ right[i];
+            }
+            return accumulatedDiff == 0;
         }
 
         // GET: /Account/ForgotPasswordConfirmation

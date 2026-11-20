@@ -38,6 +38,11 @@ namespace LMS
                 RequireUppercase = true,
             };
 
+            // Configure user lockout defaults (5 failed attempts -> 15 min lockout)
+            manager.UserLockoutEnabledByDefault = true;
+            manager.DefaultAccountLockoutTimeSpan = System.TimeSpan.FromMinutes(15);
+            manager.MaxFailedAccessAttemptsBeforeLockout = 5;
+
             var dataProtectionProvider = options.DataProtectionProvider;
             if (dataProtectionProvider != null)
             {

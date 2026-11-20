@@ -1,3 +1,46 @@
+<style>
+    .category-chip-btn {
+        background-color: rgba(6, 35, 48, 0.6) !important;
+        border: 1px solid rgba(255, 255, 255, 0.22) !important;
+        color: #E2E8F0 !important;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+        text-decoration: none !important;
+    }
+    .category-chip-btn:hover {
+        background-color: rgba(255, 122, 24, 0.2) !important;
+        border-color: #FF7A18 !important;
+        color: #FFFFFF !important;
+        transform: translateY(-1px);
+    }
+    .category-chip-btn.active {
+        background-color: #FF7A18 !important;
+        border-color: #FF7A18 !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        box-shadow: 0 0 12px rgba(255, 122, 24, 0.5) !important;
+    }
+
+    .level-chip-btn {
+        background-color: transparent !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #E2E8F0 !important;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+    }
+    .level-chip-btn:hover {
+        background-color: rgba(255, 122, 24, 0.15) !important;
+        border-color: #FF7A18 !important;
+        color: #FFFFFF !important;
+    }
+    .level-chip-btn.active {
+        background-color: #FF7A18 !important;
+        border-color: #FF7A18 !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        box-shadow: 0 0 10px rgba(255, 122, 24, 0.4) !important;
+    }
+</style>
 ﻿@model LMS.ViewModels.CourseFilterViewModel
 @{
     ViewBag.Title = "Course Catalog & Curriculums";
@@ -35,14 +78,14 @@
                 <i class="bi bi-funnel-fill text-cyan me-1"></i> Subject:
             </span>
             <a href="@Url.Action("Index", "Courses", new { search = Model.Search, level = Model.Level, priceType = Model.PriceType, sortBy = Model.SortBy })"
-               class="btn btn-sm category-chip-btn @(Model.CategoryId == null ? "active btn-primary" : "btn-outline-light") rounded-pill px-3 text-nowrap" style="@(Model.CategoryId == null ? "background-color: #FF7A18 !important; border-color: #FF7A18 !important;" : "border-color: rgba(255, 255, 255, 0.2); color: #E2E8F0;")"
+               class="btn btn-sm category-chip-btn @(Model.CategoryId == null ? "active" : "") rounded-pill px-3 text-nowrap"
                data-cat-id="">
                 All Subjects
             </a>
             @foreach (var cat in Model.Categories)
             {
                 <a href="@Url.Action("Index", "Courses", new { categoryId = cat.CategoryId, search = Model.Search, level = Model.Level, priceType = Model.PriceType, sortBy = Model.SortBy })"
-                   class="btn btn-sm category-chip-btn @(Model.CategoryId == cat.CategoryId ? "active btn-primary" : "btn-outline-light") rounded-pill px-3 text-nowrap" style="@(Model.CategoryId == cat.CategoryId ? "background-color: #FF7A18 !important; border-color: #FF7A18 !important;" : "border-color: rgba(255, 255, 255, 0.2); color: #E2E8F0;")"
+                   class="btn btn-sm category-chip-btn @(Model.CategoryId == cat.CategoryId ? "active" : "") rounded-pill px-3 text-nowrap"
                    data-cat-id="@cat.CategoryId">
                     @cat.CategoryName
                 </a>
@@ -78,10 +121,10 @@
                         <label class="form-label small fw-bold text-white">Difficulty Level</label>
                         <input type="hidden" name="level" id="filterLevelInput" value="@Model.Level" />
                         <div class="d-flex flex-wrap gap-1">
-                            <button type="button" class="btn btn-xs level-chip-btn @(string.IsNullOrEmpty(Model.Level) || Model.Level == "All" ? "active btn-primary" : "btn-outline-light") rounded-pill px-2 py-1 small" data-level="" style="@(string.IsNullOrEmpty(Model.Level) || Model.Level == "All" ? "background-color: #FF7A18 !important; border-color: #FF7A18 !important;" : "border-color: rgba(255, 255, 255, 0.2); color: #E2E8F0;")">All</button>
-                            <button type="button" class="btn btn-xs level-chip-btn @(Model.Level == "Beginner" ? "active btn-primary" : "btn-outline-light") rounded-pill px-2 py-1 small" data-level="Beginner" style="@(Model.Level == "Beginner" ? "background-color: #FF7A18 !important; border-color: #FF7A18 !important;" : "border-color: rgba(255, 255, 255, 0.2); color: #E2E8F0;")">Beginner</button>
-                            <button type="button" class="btn btn-xs level-chip-btn @(Model.Level == "Intermediate" ? "active btn-primary" : "btn-outline-light") rounded-pill px-2 py-1 small" data-level="Intermediate" style="@(Model.Level == "Intermediate" ? "background-color: #FF7A18 !important; border-color: #FF7A18 !important;" : "border-color: rgba(255, 255, 255, 0.2); color: #E2E8F0;")">Mid</button>
-                            <button type="button" class="btn btn-xs level-chip-btn @(Model.Level == "Advanced" ? "active btn-primary" : "btn-outline-light") rounded-pill px-2 py-1 small" data-level="Advanced" style="@(Model.Level == "Advanced" ? "background-color: #FF7A18 !important; border-color: #FF7A18 !important;" : "border-color: rgba(255, 255, 255, 0.2); color: #E2E8F0;")">Adv</button>
+                            <button type="button" class="btn btn-xs level-chip-btn @(string.IsNullOrEmpty(Model.Level) || Model.Level == "All" ? "active" : "") rounded-pill px-2 py-1 small" data-level="">All</button>
+                            <button type="button" class="btn btn-xs level-chip-btn @(Model.Level == "Beginner" ? "active" : "") rounded-pill px-2 py-1 small" data-level="Beginner">Beginner</button>
+                            <button type="button" class="btn btn-xs level-chip-btn @(Model.Level == "Intermediate" ? "active" : "") rounded-pill px-2 py-1 small" data-level="Intermediate">Mid</button>
+                            <button type="button" class="btn btn-xs level-chip-btn @(Model.Level == "Advanced" ? "active" : "") rounded-pill px-2 py-1 small" data-level="Advanced">Adv</button>
                         </div>
                     </div>
 
@@ -173,6 +216,7 @@
                                 {
                                     <div class="bg-dark text-center py-4 border-bottom position-relative" style="height: 160px; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #041822 0%, #062330 50%, #0B3445 100%);">
                                         <i class="bi bi-mortarboard-fill display-4 text-orange opacity-75"></i>
+                                        <span class="position-absolute top-0 start-0 m-2 course-card-category-badge" style="position: absolute; top: 10px; left: 10px;">@(course.Category?.CategoryName ?? "General")</span>
                                         <span class="position-absolute top-0 end-0 m-2 badge bg-dark bg-opacity-75 rounded-pill px-3 py-1 small">
                                             @course.Level
                                         </span>
@@ -260,7 +304,79 @@
 @section Scripts {
     <script>
         $(function () {
-            LMS.initCatalogFilter();
+            var $input = $('#catalogSearchInput');
+            var $cards = $('.course-catalog-item');
+            var $emptyMsg = $('#catalogNoMatchMessage');
+            var $levelSelect = $('select[name="level"]');
+
+            function runCatalogFilter() {
+                var query = ($input.val() || '').toLowerCase().trim();
+                var $activeChip = $('.category-chip-btn.active');
+                var activeCategory = $activeChip.length ? String($activeChip.data('cat-id') || '').trim() : '';
+                var $activeLevelChip = $('.level-chip-btn.active');
+                var activeLevel = String(($activeLevelChip.length ? $activeLevelChip.data('level') : '') || ($levelSelect.length ? $levelSelect.val() : '') || '').toLowerCase().trim();
+                if (activeLevel === 'all') activeLevel = '';
+
+                var visibleCount = 0;
+
+                $cards.each(function () {
+                    var $card = $(this);
+                    var title = ($card.data('title') || '').toLowerCase();
+                    var catId = String($card.data('cat-id') || '').trim();
+                    var level = String($card.data('level') || '').toLowerCase().trim();
+
+                    var matchesText = !query || title.indexOf(query) !== -1;
+                    var matchesCategory = !activeCategory || catId === activeCategory;
+                    var matchesLevel = !activeLevel || level === activeLevel;
+
+                    if (matchesText && matchesCategory && matchesLevel) {
+                        $card.stop(true, true).fadeIn(150);
+                        visibleCount++;
+                    } else {
+                        $card.stop(true, true).fadeOut(150);
+                    }
+                });
+
+                if (visibleCount === 0) {
+                    $emptyMsg.removeClass('d-none');
+                } else {
+                    $emptyMsg.addClass('d-none');
+                }
+            }
+
+            if ($input.length) {
+                $input.on('input', runCatalogFilter);
+            }
+
+            // Category Chip Click: Only the clicked chip becomes active (orange)
+            $(document).on('click', '.category-chip-btn', function (e) {
+                e.preventDefault();
+                $('.category-chip-btn').removeClass('active');
+                $(this).addClass('active');
+                runCatalogFilter();
+            });
+
+            // Level Chip Click
+            $(document).on('click', '.level-chip-btn', function (e) {
+                e.preventDefault();
+                $('.level-chip-btn').removeClass('active');
+                $(this).addClass('active');
+                var lvl = $(this).data('level') || '';
+                $('#filterLevelInput').val(lvl);
+                runCatalogFilter();
+            });
+
+            // Clear Filters in no-match message
+            $(document).on('click', '#catalogNoMatchMessage a', function (e) {
+                e.preventDefault();
+                $('.category-chip-btn').removeClass('active');
+                $('.category-chip-btn[data-cat-id=""]').addClass('active');
+                $('.level-chip-btn').removeClass('active');
+                $('.level-chip-btn[data-level=""]').addClass('active');
+                if ($input.length) $input.val('');
+                $('#filterLevelInput').val('');
+                runCatalogFilter();
+            });
         });
     </script>
 }

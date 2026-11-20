@@ -2,6 +2,7 @@
 Hard RBAC Security Boundary & Service Authentication.
 Enforces course-level authorization and student vs instructor content isolation.
 """
+import secrets
 from typing import List, Optional
 from fastapi import Header, HTTPException, status
 from config import settings
@@ -10,10 +11,16 @@ from core.logger import logger
 def verify_internal_api_key(
     x_internal_api_key: Optional[str] = Header(None, alias="X-Internal-API-Key")
 ) -> bool:
-    """Validates service-to-service internal shared key."""
+    """Validates service-to-service internal shared key with constant-time comparison (Fails closed)."""
     expected = settings.AISERVICE_INTERNAL_KEY
-    if expected and x_internal_api_key != expected:
-        logger.warning("Rejected unauthorized call to AIService (invalid X-Internal-API-Key).")
+    if not expected:
+        logger.error("Security Misconfiguration: AISERVICE_INTERNAL_KEY is not configured in .env or environment variables. Failing closed.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server security misconfiguration: AISERVICE_INTERNAL_KEY is not configured."
+        )
+    if not x_internal_api_key or not secrets.compare_digest(x_internal_api_key.strip(), expected.strip()):
+        logger.warning("Rejected unauthorized call to AIService (invalid or missing X-Internal-API-Key).")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: Invalid internal service credentials."

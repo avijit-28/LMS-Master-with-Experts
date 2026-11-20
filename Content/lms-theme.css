@@ -876,14 +876,20 @@ p, .lead {
     position: absolute;
     top: 12px;
     left: 12px;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(4, 24, 34, 0.9) !important;
     backdrop-filter: blur(8px);
-    color: var(--lms-text-main);
+    -webkit-backdrop-filter: blur(8px);
+    color: #FFFFFF !important;
+    border: 1px solid rgba(255, 122, 24, 0.75) !important;
     font-weight: 700;
     font-size: 0.75rem;
-    padding: 0.35rem 0.75rem;
+    padding: 0.32rem 0.8rem;
     border-radius: var(--lms-radius-pill);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    z-index: 2;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
 }
 
 .course-card-body {

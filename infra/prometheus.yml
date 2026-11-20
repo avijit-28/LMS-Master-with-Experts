@@ -1,0 +1,30 @@
+# ==============================================================================
+# EduPlatform LMS: Prometheus Scrape Configuration
+# Scrapes internal performance metrics for AIService, Qdrant, RabbitMQ, and host
+# ==============================================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # 1. Prometheus Self-Scrape
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # 2. FastAPI AI Microservice (Token counts, RAG retrieval latency, 429 retries)
+  - job_name: "fastapi-ai-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+
+  # 3. Qdrant Vector Database Telemetry
+  - job_name: "qdrant"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["qdrant:6333"]
+
+  # 4. RabbitMQ Queue Depth & Document Ingestion Telemetry
+  - job_name: "rabbitmq"
+    static_configs:
+      - targets: ["rabbitmq:15692"]

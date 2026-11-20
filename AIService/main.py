@@ -11,7 +11,7 @@ Integrates all 6 Enterprise RAG Pillars:
 import sys
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -75,6 +75,43 @@ app.include_router(health_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(documents_router, prefix="/api/v1")
 app.include_router(features_router, prefix="/api/v1")
+
+
+@app.get("/metrics", tags=["Observability"])
+def get_metrics():
+    """
+    Prometheus metrics scraping endpoint.
+    Exposes service health, vector storage counts, and semantic cache size.
+    """
+    try:
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    except ImportError:
+        vector_count = 0
+        try:
+            vector_count = qdrant_store.count()
+        except Exception:
+            pass
+
+        cache_count = 0
+        try:
+            from core.cache import semantic_cache
+            cache_count = len(semantic_cache.entries)
+        except Exception:
+            pass
+
+        metric_lines = [
+            "# HELP lms_ai_service_up Status of LMS AI microservice (1 = up)",
+            "# TYPE lms_ai_service_up gauge",
+            "lms_ai_service_up 1",
+            "# HELP lms_qdrant_vectors_total Number of vectors in Qdrant store",
+            "# TYPE lms_qdrant_vectors_total gauge",
+            f'lms_qdrant_vectors_total{{collection="{settings.QDRANT_COLLECTION}"}} {vector_count}',
+            "# HELP lms_semantic_cache_entries Total items cached in semantic memory",
+            "# TYPE lms_semantic_cache_entries gauge",
+            f"lms_semantic_cache_entries {cache_count}",
+        ]
+        return Response(content="\n".join(metric_lines) + "\n", media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 @app.get("/", tags=["Root"])

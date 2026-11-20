@@ -277,6 +277,55 @@ namespace LMS.Services
             return $"{secret.Substring(0, 4)}...{secret.Substring(secret.Length - 4)}";
         }
 
+        /// <summary>
+        /// Validates that critical core environment variables are configured and logs diagnostic statuses.
+        /// Throws an InvalidOperationException if essential database connectivity configuration is missing.
+        /// </summary>
+        public static void ValidateStartupEnvironment(bool throwOnMissingCoreSecrets = false)
+        {
+            if (!_initialized) Initialize();
+
+            System.Diagnostics.Trace.TraceInformation("[EnvConfig] Starting environment configuration audit...");
+            System.Diagnostics.Trace.TraceInformation($"[EnvConfig] .env file loaded: {IsEnvFileLoaded} (Path: {LoadedEnvFilePath ?? "N/A"})");
+
+            // Check database connection string
+            if (string.IsNullOrWhiteSpace(DatabaseConnectionString))
+            {
+                const string errMsg = "[EnvConfig] CRITICAL ERROR: DATABASE_CONNECTION_STRING is missing! Ensure DATABASE_CONNECTION_STRING is set in .env or Web.config.";
+                System.Diagnostics.Trace.TraceError(errMsg);
+                if (throwOnMissingCoreSecrets)
+                {
+                    throw new InvalidOperationException(errMsg);
+                }
+            }
+            else
+            {
+                System.Diagnostics.Trace.TraceInformation("[EnvConfig] DATABASE_CONNECTION_STRING: [Configured]");
+            }
+
+            // Check AI Service Internal Key
+            if (string.IsNullOrWhiteSpace(AiServiceInternalApiKey))
+            {
+                System.Diagnostics.Trace.TraceWarning("[EnvConfig] WARNING: AISERVICE_INTERNAL_KEY is not configured. Service-to-service calls to AIService will fail.");
+            }
+            else
+            {
+                System.Diagnostics.Trace.TraceInformation($"[EnvConfig] AISERVICE_INTERNAL_KEY: {MaskSecret(AiServiceInternalApiKey)}");
+            }
+
+            // Check Payment Gateway (Stripe)
+            if (string.IsNullOrWhiteSpace(StripeSecretKey))
+            {
+                System.Diagnostics.Trace.TraceWarning("[EnvConfig] WARNING: STRIPE_SECRET_KEY is not configured. Live Stripe checkouts will run in mock mode.");
+            }
+            else
+            {
+                System.Diagnostics.Trace.TraceInformation($"[EnvConfig] STRIPE_SECRET_KEY: {MaskSecret(StripeSecretKey)}");
+            }
+
+            System.Diagnostics.Trace.TraceInformation("[EnvConfig] Startup environment configuration audit completed.");
+        }
+
         #endregion
     }
 }

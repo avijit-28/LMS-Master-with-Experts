@@ -6,6 +6,22 @@ AIService/.env
 AIService/.env.*
 !AIService/.env.example
 
+# Database Backups & Data Files
+*.bak
+*.mdf
+*.ldf
+*.ndf
+*.trn
+App_Data/*.mdf
+App_Data/*.ldf
+
+# SSL & Certificates
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+
 # Python
 __pycache__/
 *.py[cod]
@@ -37,6 +53,9 @@ AIService/uploads/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.visualstate
 
 # User-specific files
 *.rsuser

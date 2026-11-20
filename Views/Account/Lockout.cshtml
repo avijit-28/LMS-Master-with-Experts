@@ -1,0 +1,41 @@
+@{
+    ViewBag.Title = "Account Temporarily Locked";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card p-4 p-md-5 rounded-4 shadow-lg text-center" style="background: rgba(6, 35, 48, 0.95); border: 1px solid rgba(239, 68, 68, 0.35);">
+                <div class="mb-4">
+                    <div class="d-inline-flex p-3 rounded-circle" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <i class="bi bi-shield-slash-fill text-danger fs-1"></i>
+                    </div>
+                </div>
+
+                <h3 class="fw-bold text-white mb-2">Account Temporarily Locked</h3>
+                <p class="text-white-50 mb-4" style="line-height: 1.6;">
+                    For your security, this account has been temporarily locked due to too many failed sign-in attempts.
+                </p>
+
+                <div class="p-3 mb-4 rounded-3 text-start small" style="background: rgba(4, 24, 34, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); color: #E2E8F0;">
+                    <div class="d-flex align-items-center gap-2 mb-2 text-warning fw-bold">
+                        <i class="bi bi-clock-history"></i> Automatic Unlock Window
+                    </div>
+                    <div>
+                        Your account will automatically unlock in <strong>15 minutes</strong>. You may then attempt to sign in again with your valid password.
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+                    <a href="@Url.Action("Login", "Account")" class="btn btn-outline-light rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-arrow-left me-1"></i> Return to Login
+                    </a>
+                    <a href="@Url.Action("ForgotPassword", "Account")" class="btn rounded-pill px-4 fw-bold text-white shadow-sm" style="background-color: #FF7A18; border: none;">
+                        <i class="bi bi-key me-1"></i> Recover Password
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

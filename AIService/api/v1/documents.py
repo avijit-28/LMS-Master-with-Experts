@@ -6,6 +6,7 @@ Implements:
 - N-07: Targeted Cache Invalidation on Course Update
 """
 from pathlib import Path
+import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -44,9 +45,30 @@ def index_document(
     req: IndexDocumentRequest,
     api_key_valid: bool = Depends(verify_internal_api_key)
 ):
-    path = Path(req.file_path)
-    if not path.exists():
+    # Establish canonical root boundary for uploaded documents to prevent path traversal
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    allowed_base_dirs = [
+        (project_root / "App_Data").resolve(),
+        (project_root / "Uploads").resolve(),
+        (project_root / "Content").resolve(),
+        (project_root / "AIService" / "uploads").resolve()
+    ]
+
+    target_path = Path(req.file_path).resolve()
+    is_authorized_path = any(
+        str(target_path).startswith(str(base_dir)) for base_dir in allowed_base_dirs
+    )
+    if not is_authorized_path:
+        logger.warning(f"Path Traversal Blocked: Attempted to index unauthorized path: {req.file_path}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Security violation: Target document path is outside authorized project storage volumes."
+        )
+
+    if not target_path.exists() or not target_path.is_file():
         raise HTTPException(status_code=404, detail=f"File not found on server: {req.file_path}")
+
+    path = target_path
 
     ext = path.suffix.lower().replace(".", "")
     logger.info(f"Ingesting Document #{req.document_id} ('{req.title}', format: {ext}) for Course #{req.course_id}...")
@@ -116,6 +138,102 @@ def index_document(
         total_chunks=upserted_count,
         message=f"Document successfully parsed and indexed into Hybrid Knowledge Base ({upserted_count} chunks)."
     )
+
+def publish_to_rabbitmq(job_data: dict) -> bool:
+    """Attempts to publish a document ingestion job to RabbitMQ. Returns True if queued, False if offline."""
+    try:
+        import pika
+        host = getattr(settings, "RABBITMQ_HOST", "127.0.0.1")
+        port = int(getattr(settings, "RABBITMQ_PORT", 5672))
+        user = getattr(settings, "RABBITMQ_USER", "lms_admin")
+        password = getattr(settings, "RABBITMQ_PASSWORD", "lms_secure_queue_pass_2026")
+
+        credentials = pika.PlainCredentials(user, password)
+        params = pika.ConnectionParameters(host=host, port=port, credentials=credentials, connection_attempts=1, retry_delay=1)
+        connection = pika.BlockingConnection(params)
+        channel = connection.channel()
+
+        # Ensure DLX and Queue exist
+        channel.exchange_declare(exchange="lms_dlx", exchange_type="direct", durable=True)
+        channel.queue_declare(queue="lms_document_ingestion_dlq", durable=True)
+        channel.queue_bind(exchange="lms_dlx", queue="lms_document_ingestion_dlq", routing_key="ingestion_failed")
+
+        queue_args = {
+            "x-dead-letter-exchange": "lms_dlx",
+            "x-dead-letter-routing-key": "ingestion_failed"
+        }
+        channel.queue_declare(queue="lms_document_ingestion_queue", durable=True, arguments=queue_args)
+
+        channel.basic_publish(
+            exchange="",
+            routing_key="lms_document_ingestion_queue",
+            body=json.dumps(job_data),
+            properties=pika.BasicProperties(delivery_mode=2)  # Persistent message
+        )
+        connection.close()
+        return True
+    except Exception as ex:
+        logger.warning(f"RabbitMQ message broker offline ({ex}). Processing document synchronously.")
+        return False
+
+@router.post("/queue-index", response_model=IndexDocumentResponse)
+def queue_document_index(
+    req: IndexDocumentRequest,
+    api_key_valid: bool = Depends(verify_internal_api_key)
+):
+    """
+    Asynchronous document ingestion endpoint.
+    Publishes job to RabbitMQ queue in <50ms.
+    Falls back gracefully to synchronous execution if message queue is offline.
+    """
+    # 1. Path traversal security validation
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    allowed_base_dirs = [
+        (project_root / "App_Data").resolve(),
+        (project_root / "Uploads").resolve(),
+        (project_root / "Content").resolve(),
+        (project_root / "AIService" / "uploads").resolve()
+    ]
+
+    target_path = Path(req.file_path).resolve()
+    is_authorized_path = any(
+        str(target_path).startswith(str(base_dir)) for base_dir in allowed_base_dirs
+    )
+    if not is_authorized_path:
+        logger.warning(f"Path Traversal Blocked: Attempted to index unauthorized path: {req.file_path}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Security violation: Target document path is outside authorized project storage volumes."
+        )
+
+    if not target_path.exists() or not target_path.is_file():
+        raise HTTPException(status_code=404, detail=f"File not found on server: {req.file_path}")
+
+    # 2. Attempt RabbitMQ publish
+    job_payload = {
+        "document_id": req.document_id,
+        "course_id": req.course_id,
+        "module_id": req.module_id,
+        "lesson_id": req.lesson_id,
+        "title": req.title,
+        "file_path": str(target_path),
+        "visibility": req.visibility
+    }
+
+    queued = publish_to_rabbitmq(job_payload)
+    if queued:
+        logger.info(f"Document #{req.document_id} queued to RabbitMQ for asynchronous background indexing.")
+        return IndexDocumentResponse(
+            status="Queued",
+            document_id=req.document_id,
+            course_id=req.course_id,
+            total_pages=0,
+            total_chunks=0,
+            message="Document successfully queued for background extraction via RabbitMQ worker."
+        )
+
+    # 3. Fallback to inline processing if queue is offline
+    return index_document(req, api_key_valid)
 
 @router.delete("/{document_id}")
 def delete_document(

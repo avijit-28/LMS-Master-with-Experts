@@ -1,0 +1,59 @@
+# ==============================================================================
+# EduPlatform LMS: Production Cloudflare Tunnel Ingress Configuration
+# Zero-Cost Edge Ingress: Zero Inbound Ports Opened on Firewall / Router
+# Universal SSL, DDoS Mitigation, WAF Rate Limiting, and Turnstile Protection
+# ==============================================================================
+
+# Tunnel UUID (Obtained after running 'cloudflared tunnel create eduplatform-lms')
+tunnel: YOUR_TUNNEL_UUID_HERE
+credentials-file: C:\Users\YOUR_USERNAME\.cloudflared\YOUR_TUNNEL_UUID_HERE.json
+
+# Local telemetry & logging
+loglevel: info
+logfile: C:\LMS_Backups\Logs\cloudflared.log
+
+# Connection parameters to Cloudflare Edge
+warp-routing:
+  enabled: false
+
+# Ingress rules evaluate top-to-bottom.
+# The first matching rule is executed. The last rule must be a catch-all (404).
+ingress:
+  # ----------------------------------------------------------------------------
+  # 1. Primary Production Public Website (ASP.NET MVC 5 on Windows IIS)
+  # ----------------------------------------------------------------------------
+  - hostname: lms.yourdomain.com
+    service: http://127.0.0.1:80
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: false
+      httpHostHeader: lms.yourdomain.com
+      disableChunkedEncoding: false
+      keepAliveConnections: 100
+      keepAliveTimeout: 90s
+      tcpKeepAlive: 30s
+
+  # ----------------------------------------------------------------------------
+  # 2. Local Development & Staging Ingress (Direct to IIS Express Port 56102)
+  # ----------------------------------------------------------------------------
+  - hostname: dev-lms.yourdomain.com
+    service: http://127.0.0.1:56102
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: localhost:56102
+      disableChunkedEncoding: false
+
+  # ----------------------------------------------------------------------------
+  # 3. AI Assistant Real-Time Streaming Ingress (Server-Sent Events / SSE)
+  # ----------------------------------------------------------------------------
+  - hostname: stream-lms.yourdomain.com
+    service: http://127.0.0.1:80
+    originRequest:
+      connectTimeout: 45s
+      noChunkedEncoding: false
+      keepAliveTimeout: 120s
+
+  # ----------------------------------------------------------------------------
+  # 4. Mandatory Catch-All Ingress Rule (Rejects unmapped subdomains)
+  # ----------------------------------------------------------------------------
+  - service: http_status:404

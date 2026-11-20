@@ -49,6 +49,56 @@ class BM25Retriever:
         self.doc_freqs: Dict[str, int] = {}
         self.idf: Dict[str, float] = {}
 
+    def sync_from_qdrant_paginated(self, qdrant_client, collection_name: str = "lms_course_knowledge") -> int:
+        """
+        Loads 100% of chunks from Qdrant using paginated cursor scrolling.
+        Completely eliminates the 1,000-chunk truncation ceiling.
+        """
+        all_documents: List[Dict[str, Any]] = []
+        next_offset = None
+        page_size = 500
+        page_num = 1
+
+        try:
+            from core.logger import logger
+            logger.info(f"[*] Initiating paginated BM25 corpus sync from Qdrant ('{collection_name}')...")
+        except Exception:
+            import logging
+            logger = logging.getLogger("bm25")
+
+        while True:
+            records, next_offset = qdrant_client.scroll(
+                collection_name=collection_name,
+                limit=page_size,
+                offset=next_offset,
+                with_payload=True,
+                with_vectors=False
+            )
+
+            for rec in records:
+                payload = rec.payload or {}
+                all_documents.append({
+                    "chunk_id": str(rec.id),
+                    "document_id": payload.get("document_id"),
+                    "course_id": payload.get("course_id"),
+                    "module_id": payload.get("module_id"),
+                    "lesson_id": payload.get("lesson_id"),
+                    "page_number": payload.get("page_number", 1),
+                    "section_title": payload.get("section_title", "Course Document"),
+                    "visibility": payload.get("visibility", "student"),
+                    "text": payload.get("text", "")
+                })
+
+            logger.info(f"    BM25 Sync Page {page_num}: Retrieved {len(records)} chunks (Cumulative: {len(all_documents)}).")
+            page_num += 1
+
+            if next_offset is None or len(records) < page_size:
+                break
+
+        self.index_documents(all_documents)
+        logger.info(f"[+] BM25 Corpus synchronization complete: {len(self.corpus)} chunks indexed successfully.")
+        return len(self.corpus)
+
     def index_documents(self, documents: List[Dict[str, Any]]):
         """Builds in-memory BM25 index over documents."""
         self.corpus = documents

@@ -158,7 +158,8 @@ namespace LMS.Controllers
             {
                 string userId = User.Identity.IsAuthenticated ? User.Identity.GetUserId() : "anonymous_guest";
                 string userRole = GetCurrentUserRole();
-                string rateLimitKey = User.Identity.IsAuthenticated ? userId : (Request.UserHostAddress ?? "guest");
+                string clientIp = ClientIpResolver.GetClientIp(Request);
+                string rateLimitKey = User.Identity.IsAuthenticated ? userId : ("ip:" + clientIp);
                 var now = DateTime.UtcNow;
 
                 // C-01: Sliding-Window Rate Limiter (Max 5 requests per 30 seconds per user)
