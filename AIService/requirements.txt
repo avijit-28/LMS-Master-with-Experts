@@ -1,0 +1,26 @@
+# ==============================================================================
+# EduPlatform LMS - Enterprise RAG AI Assistant Microservice Dependencies
+# Compatible with Python 3.10 - 3.12
+# ==============================================================================
+
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# LLM Providers (Google Gemini & Groq Failover)
+google-genai>=1.0.0
+groq>=0.5.0
+
+# Vector Database (Embedded On-Disk Cosine Vectorstore)
+qdrant-client>=1.8.0
+numpy>=1.26.0
+
+# Document Extractors (PDF, DOCX, PPTX)
+PyMuPDF>=1.24.0
+python-docx>=1.1.0
+python-pptx>=0.6.23
+
+# Environment & Utilities
+python-dotenv>=1.0.1
+requests>=2.31.0
