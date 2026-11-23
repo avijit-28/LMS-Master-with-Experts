@@ -269,6 +269,17 @@
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
     <Content Include="Content\lms-theme.css" />
+    <Content Include="Content\images\favicon.png" />
+    <Content Include="Content\images\hero-student.png" />
+    <Content Include="Content\images\lms-brand-icon.png" />
+    <Content Include="Content\images\lms-platform-preview.png" />
+    <Content Include="Content\images\logo-icon.png" />
+    <Content Include="Content\images\signatures\dr-evelyn-vance-signature.png" />
+    <Content Include="Content\uploads\signatures\signature_8ee085cf-6684-4b09-a72a-d491739745a8_639293549949088515.png" />
+    <Content Include="Content\uploads\signatures\signature_8ee085cf-6684-4b09-a72a-d491739745a8_639293550211089170.png" />
+    <Content Include="Content\uploads\courses\1\lessons\b24a43ea021b43da9d15d0b01c3b52e5_Basic_CSharp_Course.pdf" />
+    <Content Include="Content\uploads\courses\1\lessons\ba345db29bf34616a7ef4b605360abfe_Basic_CSharp_Course.pdf" />
+    <Content Include="Content\uploads\courses\2\lessons\cd8c045068434dbc88a4728e23378e10_Supervised_Learning_Beginners_Course.pdf" />
     <Content Include="Scripts\lms-app.js" />
     <Content Include="Scripts\bootstrap.bundle.js" />
     <Content Include="Scripts\bootstrap.bundle.min.js" />
