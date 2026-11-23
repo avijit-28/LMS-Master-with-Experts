@@ -47,6 +47,10 @@ def get_rabbitmq_connection():
     if pika is None:
         raise RuntimeError("pika library is not installed in the Python environment.")
 
+    url = getattr(settings, "RABBITMQ_URL", None)
+    if url:
+        return pika.BlockingConnection(pika.URLParameters(url))
+
     host = getattr(settings, "RABBITMQ_HOST", "127.0.0.1")
     port = int(getattr(settings, "RABBITMQ_PORT", 5672))
     user = getattr(settings, "RABBITMQ_USER", "lms_admin")

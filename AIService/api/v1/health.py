@@ -11,6 +11,14 @@ router = APIRouter(prefix="/health", tags=["Health"])
 
 @router.get("")
 def get_health():
+    redis_status = "disabled"
+    if settings.REDIS_URL or settings.UPSTASH_REDIS_REST_URL:
+        redis_status = "connected" if semantic_cache.has_redis else "fallback_memory"
+
+    rabbitmq_status = "disabled"
+    if settings.RABBITMQ_URL or settings.RABBITMQ_HOST:
+        rabbitmq_status = "configured"
+
     return {
         "status": "healthy",
         "service": settings.APP_NAME,
@@ -25,7 +33,13 @@ def get_health():
         "semantic_cache": {
             "enabled": settings.ENABLE_SEMANTIC_CACHE,
             "cached_entries": len(semantic_cache.entries),
-            "threshold": settings.SEMANTIC_CACHE_SIMILARITY_THRESHOLD
+            "threshold": settings.SEMANTIC_CACHE_SIMILARITY_THRESHOLD,
+            "distributed_backend": redis_status,
+            "redis_active": semantic_cache.has_redis
+        },
+        "message_broker": {
+            "rabbitmq_status": rabbitmq_status,
+            "provider": "CloudAMQP" if "cloudamqp" in (settings.RABBITMQ_URL or "") else "Standard"
         },
         "llm_cascading": {
             "primary": settings.DEFAULT_LLM_PROVIDER,

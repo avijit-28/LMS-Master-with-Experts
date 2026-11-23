@@ -26,9 +26,19 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str = Field(default="lms_course_knowledge", env="QDRANT_COLLECTION")
     EMBEDDING_DIMENSION: int = Field(default=3072, env="EMBEDDING_DIMENSION")
 
-    # Semantic Caching
+    # Semantic Caching & Distributed Redis
     ENABLE_SEMANTIC_CACHE: bool = Field(default=True, env="ENABLE_SEMANTIC_CACHE")
     SEMANTIC_CACHE_SIMILARITY_THRESHOLD: float = Field(default=0.95, env="SEMANTIC_CACHE_SIMILARITY_THRESHOLD")
+    REDIS_URL: str = Field(default="", env="REDIS_URL")
+    UPSTASH_REDIS_REST_URL: str = Field(default="", env="UPSTASH_REDIS_REST_URL")
+    UPSTASH_REDIS_REST_TOKEN: str = Field(default="", env="UPSTASH_REDIS_REST_TOKEN")
+
+    # Distributed Message Broker (RabbitMQ / CloudAMQP)
+    RABBITMQ_URL: str = Field(default="", env="RABBITMQ_URL")
+    RABBITMQ_HOST: str = Field(default="127.0.0.1", env="RABBITMQ_HOST")
+    RABBITMQ_PORT: int = Field(default=5672, env="RABBITMQ_PORT")
+    RABBITMQ_USER: str = Field(default="lms_admin", env="RABBITMQ_USER")
+    RABBITMQ_PASSWORD: str = Field(default="lms_secure_queue_pass_2026", env="RABBITMQ_PASSWORD")
 
     # Hybrid Search
     HYBRID_SEARCH_TOP_K: int = Field(default=8, env="HYBRID_SEARCH_TOP_K")
