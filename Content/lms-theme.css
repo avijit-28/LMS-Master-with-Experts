@@ -3421,3 +3421,74 @@ body.page-courses .level-chip-btn.active {
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     color: #FFFFFF !important;
 }
+
+/* ==========================================================================
+   Universal Portal & Card Readability Upgrades (Dark Theme Glass Contrast)
+   ========================================================================== */
+body.page-certificate .card,
+body.page-certificate .card-custom,
+body.page-profile .card,
+body.page-profile .card-custom,
+body.page-student-dashboard .card,
+body.page-student-dashboard .card-custom,
+body.page-my-courses .card,
+body.page-my-courses .card-custom {
+    background: rgba(6, 35, 48, 0.92) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #FFFFFF !important;
+}
+
+body.page-certificate .card.bg-white,
+body.page-profile .card.bg-white,
+body.page-student-dashboard .card.bg-white,
+body.page-my-courses .card.bg-white {
+    background: rgba(6, 35, 48, 0.92) !important;
+    color: #FFFFFF !important;
+}
+
+body.page-certificate h1, body.page-certificate h2, body.page-certificate h3,
+body.page-certificate h4, body.page-certificate h5, body.page-certificate h6,
+body.page-profile h1, body.page-profile h2, body.page-profile h3,
+body.page-profile h4, body.page-profile h5, body.page-profile h6 {
+    color: #FFFFFF !important;
+}
+
+/* Light / Secondary sub-boxes inside dark cards */
+body.page-profile .bg-light,
+body.page-certificate .bg-light,
+body.page-student-dashboard .bg-light,
+body.page-my-courses .bg-light,
+.card-custom .bg-light {
+    background: rgba(11, 52, 69, 0.65) !important;
+    border: 1px solid rgba(39, 184, 214, 0.25) !important;
+    color: #E2E8F0 !important;
+}
+
+body.page-profile .bg-light .text-dark,
+body.page-certificate .bg-light .text-dark,
+.card-custom .bg-light .text-dark {
+    color: #FFFFFF !important;
+}
+
+body.page-profile .bg-light .badge.bg-white,
+.card-custom .badge.bg-white {
+    background: rgba(6, 35, 48, 0.9) !important;
+    color: #CBD5E1 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Dark mode form controls inside cards */
+body.page-profile .card-custom .form-control,
+body.page-certificate .card-custom .form-control {
+    background-color: rgba(4, 24, 34, 0.85) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #FFFFFF !important;
+}
+
+body.page-profile .card-custom .form-control:focus,
+body.page-certificate .card-custom .form-control:focus {
+    background-color: rgba(4, 24, 34, 0.95) !important;
+    border-color: #FF7A18 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 0 0.25rem rgba(255, 122, 24, 0.25) !important;
+}
