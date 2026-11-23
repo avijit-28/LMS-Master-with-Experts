@@ -81,6 +81,20 @@ namespace LMS.Services
         {
             try
             {
+                string base64Content = null;
+                if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+                {
+                    try
+                    {
+                        var bytes = File.ReadAllBytes(filePath);
+                        base64Content = Convert.ToBase64String(bytes);
+                    }
+                    catch (Exception readEx)
+                    {
+                        System.Diagnostics.Trace.TraceWarning($"[AiServiceClient] Could not read file bytes for base64 upload: {readEx.Message}");
+                    }
+                }
+
                 // Uses asynchronous queue endpoint with transparent fallback
                 using (var httpRequest = CreateAuthorizedRequest(HttpMethod.Post, "api/v1/documents/queue-index", internalApiKey))
                 {
@@ -92,6 +106,7 @@ namespace LMS.Services
                         lesson_id = lessonId,
                         title = title ?? Path.GetFileName(filePath),
                         file_path = filePath,
+                        file_content_base64 = base64Content,
                         visibility = visibility ?? "student"
                     };
 

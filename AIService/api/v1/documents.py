@@ -29,7 +29,9 @@ class IndexDocumentRequest(BaseModel):
     module_id: Optional[int] = None
     lesson_id: Optional[int] = None
     title: str
-    file_path: str
+    file_path: Optional[str] = ""
+    file_content_base64: Optional[str] = None
+    raw_text: Optional[str] = None
     visibility: str = "student"  # student, instructor_only
 
 class IndexDocumentResponse(BaseModel):
@@ -45,32 +47,51 @@ def index_document(
     req: IndexDocumentRequest,
     api_key_valid: bool = Depends(verify_internal_api_key)
 ):
-    # Establish canonical root boundary for uploaded documents to prevent path traversal
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
-    allowed_base_dirs = [
-        (project_root / "App_Data").resolve(),
-        (project_root / "Uploads").resolve(),
-        (project_root / "Content").resolve(),
-        (project_root / "AIService" / "uploads").resolve()
-    ]
+    import base64
+    path: Optional[Path] = None
 
-    target_path = Path(req.file_path).resolve()
-    is_authorized_path = any(
-        str(target_path).startswith(str(base_dir)) for base_dir in allowed_base_dirs
-    )
-    if not is_authorized_path:
-        logger.warning(f"Path Traversal Blocked: Attempted to index unauthorized path: {req.file_path}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Security violation: Target document path is outside authorized project storage volumes."
+    if req.file_content_base64:
+        uploads_dir = Path(__file__).resolve().parent.parent.parent / "uploads"
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        file_ext = Path(req.title).suffix.lower().replace(".", "") or "pdf"
+        target_path = uploads_dir / f"doc_{req.document_id}.{file_ext}"
+        try:
+            target_path.write_bytes(base64.b64decode(req.file_content_base64))
+            path = target_path
+            ext = file_ext
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to decode base64 file content: {e}")
+    elif req.raw_text:
+        ext = "txt"
+        path = None
+    else:
+        # Establish canonical root boundary for uploaded documents to prevent path traversal
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        allowed_base_dirs = [
+            (project_root / "App_Data").resolve(),
+            (project_root / "Uploads").resolve(),
+            (project_root / "Content").resolve(),
+            (project_root / "AIService" / "uploads").resolve(),
+            Path("/tmp").resolve()
+        ]
+
+        target_path = Path(req.file_path).resolve()
+        is_authorized_path = any(
+            str(target_path).startswith(str(base_dir)) for base_dir in allowed_base_dirs
         )
+        if not is_authorized_path:
+            logger.warning(f"Path Traversal Blocked: Attempted to index unauthorized path: {req.file_path}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Security violation: Target document path is outside authorized project storage volumes."
+            )
 
-    if not target_path.exists() or not target_path.is_file():
-        raise HTTPException(status_code=404, detail=f"File not found on server: {req.file_path}")
+        if not target_path.exists() or not target_path.is_file():
+            raise HTTPException(status_code=404, detail=f"File not found on server: {req.file_path}")
 
-    path = target_path
+        path = target_path
+        ext = path.suffix.lower().replace(".", "")
 
-    ext = path.suffix.lower().replace(".", "")
     logger.info(f"Ingesting Document #{req.document_id} ('{req.title}', format: {ext}) for Course #{req.course_id}...")
 
     # 1. Remove previous vectors for this document (idempotent re-indexing)
@@ -143,14 +164,19 @@ def publish_to_rabbitmq(job_data: dict) -> bool:
     """Attempts to publish a document ingestion job to RabbitMQ. Returns True if queued, False if offline."""
     try:
         import pika
-        host = getattr(settings, "RABBITMQ_HOST", "127.0.0.1")
-        port = int(getattr(settings, "RABBITMQ_PORT", 5672))
-        user = getattr(settings, "RABBITMQ_USER", "lms_admin")
-        password = getattr(settings, "RABBITMQ_PASSWORD", "lms_secure_queue_pass_2026")
+        url = getattr(settings, "RABBITMQ_URL", None)
+        if url:
+            params = pika.URLParameters(url)
+            connection = pika.BlockingConnection(params)
+        else:
+            host = getattr(settings, "RABBITMQ_HOST", "127.0.0.1")
+            port = int(getattr(settings, "RABBITMQ_PORT", 5672))
+            user = getattr(settings, "RABBITMQ_USER", "lms_admin")
+            password = getattr(settings, "RABBITMQ_PASSWORD", "lms_secure_queue_pass_2026")
 
-        credentials = pika.PlainCredentials(user, password)
-        params = pika.ConnectionParameters(host=host, port=port, credentials=credentials, connection_attempts=1, retry_delay=1)
-        connection = pika.BlockingConnection(params)
+            credentials = pika.PlainCredentials(user, password)
+            params = pika.ConnectionParameters(host=host, port=port, credentials=credentials, connection_attempts=1, retry_delay=1)
+            connection = pika.BlockingConnection(params)
         channel = connection.channel()
 
         # Ensure DLX and Queue exist
@@ -183,16 +209,19 @@ def queue_document_index(
 ):
     """
     Asynchronous document ingestion endpoint.
-    Publishes job to RabbitMQ queue in <50ms.
-    Falls back gracefully to synchronous execution if message queue is offline.
+    If base64 file content or raw text is provided, indexes directly into Qdrant.
     """
+    if req.file_content_base64 or req.raw_text:
+        return index_document(req, api_key_valid)
+
     # 1. Path traversal security validation
     project_root = Path(__file__).resolve().parent.parent.parent.parent
     allowed_base_dirs = [
         (project_root / "App_Data").resolve(),
         (project_root / "Uploads").resolve(),
         (project_root / "Content").resolve(),
-        (project_root / "AIService" / "uploads").resolve()
+        (project_root / "AIService" / "uploads").resolve(),
+        Path("/tmp").resolve()
     ]
 
     target_path = Path(req.file_path).resolve()

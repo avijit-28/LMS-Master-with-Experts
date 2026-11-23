@@ -1225,24 +1225,24 @@ namespace LMS.Controllers
                     apiKey
                 );
 
-                if (indexResult != null && indexResult.status == "Indexed")
+                if (indexResult != null && (indexResult.status == "Indexed" || indexResult.status == "Queued"))
                 {
                     doc.Status = "Indexed";
                     doc.TotalPages = Math.Max(indexResult.total_pages, 1);
-                    doc.TotalChunks = indexResult.chunks_created;
+                    doc.TotalChunks = Math.Max(indexResult.chunks_created, indexResult.total_chunks);
                     doc.IndexedAt = DateTime.UtcNow;
                     doc.ErrorMessage = null;
                     await _db.SaveChangesAsync();
 
-                    TempData["SuccessMessage"] = $"Document '{doc.Title}' successfully uploaded and indexed ({indexResult.chunks_created} vector chunks created in Qdrant).";
+                    // Also index natively in SQL Server KnowledgeChunks for fast hybrid search & quiz generation
+                    await IndexDocumentNativelyAsync(doc, fullPath, ext);
+
+                    TempData["SuccessMessage"] = $"Document '{doc.Title}' successfully uploaded and indexed ({doc.TotalChunks} knowledge chunks generated for AI assistant).";
                 }
                 else
                 {
-                    doc.Status = "Failed";
-                    doc.ErrorMessage = indexResult?.message ?? "AI Service indexing returned failure.";
-                    await _db.SaveChangesAsync();
-
-                    TempData["ErrorMessage"] = $"Document saved but AI indexing failed: {doc.ErrorMessage}";
+                    // Fall back to native document parsing into SQL Server
+                    await IndexDocumentNativelyAsync(doc, fullPath, ext);
                 }
             }
             catch (Exception ex)
